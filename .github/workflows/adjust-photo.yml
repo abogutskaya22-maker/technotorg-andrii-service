@@ -1,4 +1,4 @@
-name: Use official Technotorg header logo
+name: Prefill consultation messages
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Replace CSS-built header logo with official brand asset
+      - name: Send consultation text directly to messenger
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,22 +22,13 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbkAAAB2CAYAAABVne39AAAL70lEQVR4nO3d25HiOB+HYbG1ARACEVBU0QHMZQfBNWRAEJ1Bc00Qc9kBDFUUERACGXgv2tp1s1jWX2fJ71P11Tc7PY2ND/pZsg6LrusUAAAt+iv3DgAAEAshBwBoFiEHAGgWIQcAaBYhBwBo1j/4bnTNtl2cKAAAAABJRU5ErkJggg=='
+          old = "async function copyAndOpen(url){const t=rawSummary();try{await navigator.clipboard.writeText(t);b('Текст звернення скопійовано ✅ Вставте його у відкритий чат.')}catch(e){b('Відкриваю месенджер. Скопіюйте підсумок вище та надішліть Андрію.')}setTimeout(()=>location.href=url,250)}function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><button class=\"btn light\" type=\"button\" onclick=\"copyAndOpen(VIBER)\">${ICONS.viber}Viber</button><button class=\"btn light\" type=\"button\" onclick=\"copyAndOpen(TG)\">${ICONS.telegram}Telegram</button></div>`}"
 
-          # Use the actual Technotorg logo instead of text + a CSS-built circle.
-          s = s.replace(
-              '.logo{display:flex;align-items:center;gap:14px;color:var(--r);font-weight:900;font-size:23px}.mark{width:44px;height:44px;border:4px solid var(--r);border-radius:50%;display:grid;place-items:center;font-size:24px}',
-              '.logo{display:flex;align-items:center}.logo img{display:block;height:48px;width:auto;max-width:240px;object-fit:contain}'
-          )
-          s = s.replace(
-              '<div class="logo"><span>ТЕХНОТОРГ</span><span class="mark">Т</span></div>',
-              f'<a class="logo" href="https://technotorg.com" target="_blank" rel="noopener" aria-label="Техноторг"><img src="{logo}" alt="Техноторг"></a>'
-          )
-          s = s.replace(
-              '.logo{font-size:18px}.mark{width:36px;height:36px;border-width:3px}',
-              '.logo img{height:38px;max-width:190px}'
-          )
+          new = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberShare=`viber://forward?text=${txt}`;let telegramShare=`https://t.me/share/url?url=&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" target=\"_blank\" href=\"${telegramShare}\">${ICONS.telegram}Telegram</a></div>`}"
 
+          if old not in s:
+              raise SystemExit('Target block not found')
+          s = s.replace(old, new)
           p.write_text(s)
           PY
       - name: Commit change
@@ -45,5 +36,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Use official Technotorg header logo [skip ci]' || exit 0
+          git commit -m 'Prefill consultation text in messengers [skip ci]' || exit 0
           git push
