@@ -8,7 +8,9 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const event = String(body.event || '').slice(0, 60);
   const data = body.data && typeof body.data === 'object' ? body.data : {};
-  const ts = new Date().toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
+  const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
+  const safeDate = Number.isNaN(occurredAt.getTime()) ? new Date() : occurredAt;
+  const ts = safeDate.toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
 
   const clean = (v, max = 500) => String(v ?? '—').replace(/[<>]/g, '').slice(0, max);
   const labels = {
@@ -31,14 +33,15 @@ export default async function handler(req, res) {
       `⚠️ Проблема: ${clean(data.issue, 700)}`,
       `🧾 Код помилки: ${clean(data.error, 160)}`
     );
-  } else if (event === 'messenger_clicked') {
-    lines.push(`📲 Месенджер: ${clean(data.messenger, 40)}`, `📍 Звідки: ${clean(data.context, 80)}`);
+  } else {
     if (data.name) lines.push(`👤 Ім’я: ${clean(data.name, 120)}`);
     if (data.phone) lines.push(`📱 Телефон: ${clean(data.phone, 80)}`);
-  } else if (event === 'call_clicked') {
-    lines.push(`📍 Звідки: ${clean(data.context, 80)}`);
-  } else if (event === 'consultation_started') {
-    lines.push(`📍 Звідки: ${clean(data.context, 80)}`);
+
+    if (event === 'messenger_clicked') {
+      lines.push(`📲 Месенджер: ${clean(data.messenger, 40)}`, `📍 Звідки: ${clean(data.context, 80)}`);
+    } else if (event === 'call_clicked' || event === 'consultation_started') {
+      lines.push(`📍 Звідки: ${clean(data.context, 80)}`);
+    }
   }
 
   try {
