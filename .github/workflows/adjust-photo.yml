@@ -1,4 +1,4 @@
-name: Mobile consultation modal
+name: Fix Telegram consultation link
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Make mini consultation a mobile popup
+      - name: Open Telegram chat directly by phone with prefilled text
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,34 +22,13 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          # Base controls for the mobile consultation modal.
-          s = s.replace(
-              '.chatTop{padding:17px 19px;border-bottom:1px solid var(--l);font-weight:850}',
-              '.chatTop{padding:17px 19px;border-bottom:1px solid var(--l);font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:12px}.chatClose,.mobileConsultBtn{display:none}'
-          )
+          old = "let telegramShare=`https://t.me/share/url?url=&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" target=\"_blank\" href=\"${telegramShare}\">${ICONS.telegram}Telegram</a></div>`}"
+          new = "let telegramDirect=`${TG}&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
 
-          # Add a compact mobile CTA in the intro card.
-          old_intro = '<p><b>Анна</b> — AI-асистентка Андрія. Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.</p></div><div class="chat"><div class="chatTop">🤖 Анна · AI-асистентка Андрія</div>'
-          new_intro = '<p><b>Анна</b> — AI-асистентка Андрія. Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.</p><button class="btn red mobileConsultBtn" type="button" onclick="openConsult()">🤖 Відкрити міні-консультацію</button></div><div class="chat"><div class="chatTop"><span>🤖 Анна · AI-асистентка Андрія</span><button class="chatClose" type="button" onclick="closeConsult()" aria-label="Закрити">×</button></div>'
-          if old_intro not in s:
-              raise SystemExit('Consult intro target not found')
-          s = s.replace(old_intro, new_intro, 1)
+          if old not in s:
+              raise SystemExit('Telegram share block not found')
 
-          # Open the chat as a popup from hero and the sticky mobile bar.
-          s = s.replace('<a class="btn outline quick" href="#consult">🤖 Міні-консультація</a>', '<button class="btn outline quick" type="button" onclick="openConsult()">🤖 Міні-консультація</button>', 1)
-          s = s.replace('<a href="#consult"><span>🤖</span>Консультація</a>', '<button type="button" onclick="openConsult()"><span>🤖</span>Консультація</button>', 1)
-
-          # Mobile-only modal presentation: full-screen backdrop, bottom-sheet chat, no inline chat.
-          mobile_css = '''@media(max-width:600px){#consult .chat{display:none}#consult .mobileConsultBtn{display:inline-flex;margin-top:18px}#consult.mobileOpen{position:fixed;inset:0;z-index:140;background:rgba(10,12,16,.66);padding:10px;display:flex;align-items:flex-end}#consult.mobileOpen .wrap.consult{width:100%;margin:0;display:block}#consult.mobileOpen .intro{display:none}#consult.mobileOpen .chat{display:flex;width:100%;height:min(82dvh,650px);max-height:82dvh;border-radius:24px 24px 18px 18px;box-shadow:0 24px 70px rgba(0,0,0,.35)}#consult.mobileOpen .chatClose{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:#f1f2f4;color:var(--i);font-size:22px;line-height:1;cursor:pointer}body.consultOpen{overflow:hidden}.mobileConsultBtn{width:100%}}'''
-          s = s.replace('</style>', mobile_css + '</style>', 1)
-
-          # Responsive opener: modal on phone, smooth scroll on larger screens.
-          marker = "const ICONS="
-          js = "function openConsult(){const el=document.getElementById('consult');if(window.matchMedia('(max-width:600px)').matches){el.classList.add('mobileOpen');document.body.classList.add('consultOpen');setTimeout(()=>{const box=document.getElementById('msgs');if(box)box.scrollTop=box.scrollHeight},50)}else{el.scrollIntoView({behavior:'smooth',block:'start'})}}function closeConsult(){document.getElementById('consult').classList.remove('mobileOpen');document.body.classList.remove('consultOpen');if(document.activeElement)document.activeElement.blur()}"
-          if marker not in s:
-              raise SystemExit('Script marker not found')
-          s = s.replace(marker, js + marker, 1)
-
+          s = s.replace(old, new, 1)
           p.write_text(s)
           PY
       - name: Commit change
@@ -57,5 +36,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Open mini consultation in mobile modal [skip ci]' || exit 0
+          git commit -m 'Open Telegram consultation directly by phone [skip ci]' || exit 0
           git push
