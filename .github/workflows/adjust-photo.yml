@@ -1,4 +1,4 @@
-name: Fix analytics lead fields
+name: Bind analytics history to lead
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Include lead name and phone in completed consultation analytics
+      - name: Buffer pre-lead events and attach them after phone identification
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,13 +22,18 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          old = "trackEvent('consultation_completed',{machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error})"
-          new = "trackEvent('consultation_completed',{name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error})"
+          old_track = "function trackEvent(event,data={}){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data}),keepalive:true}).catch(()=>{})}catch(e){}}"
+          new_track = "const analyticsLead={name:'',phone:'',identified:false,queue:[]};function postAnalytics(event,data={},occurredAt=new Date().toISOString()){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data,occurredAt}),keepalive:true}).catch(()=>{})}catch(e){}}function trackEvent(event,data={}){const occurredAt=new Date().toISOString();if(!analyticsLead.identified){analyticsLead.queue.push({event,data,occurredAt});return}postAnalytics(event,{...data,name:analyticsLead.name,phone:analyticsLead.phone},occurredAt)}function identifyLead(name,phone){analyticsLead.name=name;analyticsLead.phone=phone;analyticsLead.identified=true;const queued=analyticsLead.queue.splice(0);queued.forEach(x=>postAnalytics(x.event,{...x.data,name,phone},x.occurredAt))}trackEvent('page_view',{})"
+          if old_track not in s:
+              raise SystemExit('trackEvent block not found')
+          s = s.replace(old_track, new_track, 1)
 
-          if old not in s:
-              raise SystemExit('analytics payload target not found')
+          old_phone = "t=phone}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t})"
+          new_phone = "t=phone;identifyLead(s.name,t)}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t})"
+          if old_phone not in s:
+              raise SystemExit('phone identification point not found')
+          s = s.replace(old_phone, new_phone, 1)
 
-          s = s.replace(old, new, 1)
           p.write_text(s)
           PY
       - name: Commit change
@@ -36,5 +41,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Include lead name and phone in analytics [skip ci]' || exit 0
+          git commit -m 'Attach pre-lead analytics history after phone identification [skip ci]' || exit 0
           git push
