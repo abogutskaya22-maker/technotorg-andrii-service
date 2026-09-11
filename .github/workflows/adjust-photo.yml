@@ -1,4 +1,4 @@
-name: Refine assistant and messenger icons
+name: Refine assistant chat
 
 on:
   push:
@@ -14,42 +14,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update assistant name and messenger branding
+      - name: Rename assistant and lock chat height
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           p = Path('index.html')
           s = p.read_text()
 
-          # Female assistant name.
-          s = s.replace('Макс', 'Мія')
-          s = s.replace('Він збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.', 'Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.')
+          # Assistant name.
+          s = s.replace('Олена', 'Анна')
+          s = s.replace('Мія', 'Анна')
+          s = s.replace('Макс', 'Анна')
 
-          # Use recognizable messenger brand marks from Simple Icons.
-          s = s.replace('.brandIcon svg{width:100%;height:100%;display:block}', '.brandIcon img{width:100%;height:100%;display:block;object-fit:contain}')
-
-          icons = {
-              'Viber': '<span class="brandIcon"><img src="https://cdn.simpleicons.org/viber/7360F2" alt=""></span>',
-              'WhatsApp': '<span class="brandIcon"><img src="https://cdn.simpleicons.org/whatsapp/25D366" alt=""></span>',
-              'Telegram': '<span class="brandIcon"><img src="https://cdn.simpleicons.org/telegram/26A5E4" alt=""></span>',
-          }
-
-          # Replace all existing hand-drawn messenger SVG spans by matching the label that follows them.
-          for label, icon in icons.items():
-              pattern = rf'<span class="brandIcon"><svg.*?</svg></span>{label}'
-              s = re.sub(pattern, icon + label, s, flags=re.S)
-
-          # Add icons to contact section messenger rows if not already present.
-          s = s.replace('<a href="viber://chat?number=%2B380665628743"><span>Viber</span><span>→</span></a>', f'<a href="viber://chat?number=%2B380665628743"><span style="display:flex;align-items:center;gap:10px">{icons["Viber"]}Viber</span><span>→</span></a>')
-          s = s.replace('<a href="https://wa.me/380665628743"><span>WhatsApp</span><span>→</span></a>', f'<a href="https://wa.me/380665628743"><span style="display:flex;align-items:center;gap:10px">{icons["WhatsApp"]}WhatsApp</span><span>→</span></a>')
-          s = s.replace('<a href="tg://resolve?phone=380665628743"><span>Telegram</span><span>→</span></a>', f'<a href="tg://resolve?phone=380665628743"><span style="display:flex;align-items:center;gap:10px">{icons["Telegram"]}Telegram</span><span>→</span></a>')
-
-          # Add messenger icons to the final mini-consultation send choices.
-          old_send = 'c.innerHTML=`<div class="sendChoices"><a class="btn light" target="_blank" href="${WA}?text=${txt}">WhatsApp</a><button class="btn light" type="button" onclick="copyAndOpen(VIBER)">Viber</button><button class="btn light" type="button" onclick="copyAndOpen(TG)">Telegram</button></div>`'
-          new_send = f'c.innerHTML=`<div class="sendChoices"><a class="btn light" target="_blank" href="${{WA}}?text=${{txt}}">{icons["WhatsApp"]}WhatsApp</a><button class="btn light" type="button" onclick="copyAndOpen(VIBER)">{icons["Viber"]}Viber</button><button class="btn light" type="button" onclick="copyAndOpen(TG)">{icons["Telegram"]}Telegram</button></div>`'
-          s = s.replace(old_send, new_send)
+          # Keep the chat at a fixed height and scroll messages inside it.
+          s = s.replace(
+              '.chat{background:#fff;border:1px solid var(--l);border-radius:28px;overflow:hidden;min-height:500px;display:flex;flex-direction:column}',
+              '.chat{background:#fff;border:1px solid var(--l);border-radius:28px;overflow:hidden;height:500px;min-height:0;max-height:500px;display:flex;flex-direction:column}'
+          )
+          s = s.replace(
+              '.msgs{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1}',
+              '.msgs{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}'
+          )
+          s = s.replace(
+              '.chat{min-height:470px}',
+              '.chat{height:470px;min-height:0;max-height:470px}'
+          )
 
           p.write_text(s)
           PY
@@ -58,5 +48,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Rename assistant to Mia and refine messenger icons [skip ci]' || exit 0
+          git commit -m 'Rename assistant to Anna and make chat scrollable [skip ci]' || exit 0
           git push
