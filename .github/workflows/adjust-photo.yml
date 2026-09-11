@@ -1,4 +1,4 @@
-name: Wire Telegram analytics
+name: Fix analytics lead fields
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add analytics tracking
+      - name: Include lead name and phone in completed consultation analytics
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,28 +22,13 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          marker = "const ICONS="
-          analytics = "function trackEvent(event,data={}){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data}),keepalive:true}).catch(()=>{})}catch(e){}}"
-          if analytics not in s:
-              if marker not in s:
-                  raise SystemExit('script marker not found')
-              s = s.replace(marker, analytics + marker, 1)
+          old = "trackEvent('consultation_completed',{machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error})"
+          new = "trackEvent('consultation_completed',{name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error})"
 
-          old_open = "function openConsult(){const el=document.getElementById('consult');if(window.matchMedia('(max-width:600px)').matches){"
-          new_open = "function openConsult(){trackEvent('consultation_started',{context:'site'});const el=document.getElementById('consult');if(window.matchMedia('(max-width:600px)').matches){"
-          if old_open in s:
-              s = s.replace(old_open, new_open, 1)
+          if old not in s:
+              raise SystemExit('analytics payload target not found')
 
-          old_finish = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Телефон: ${esc(s.phone)}<br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());"
-          new_finish = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Телефон: ${esc(s.phone)}<br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);trackEvent('consultation_completed',{machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error});let txt=encodeURIComponent(rawSummary());"
-          if old_finish not in s:
-              raise SystemExit('finish() target not found')
-          s = s.replace(old_finish, new_finish, 1)
-
-          click_js = "document.addEventListener('click',e=>{const el=e.target.closest('a,button');if(!el)return;const text=(el.textContent||'').trim();let messenger='';if(text.includes('WhatsApp'))messenger='WhatsApp';else if(text.includes('Viber'))messenger='Viber';else if(text.includes('Telegram'))messenger='Telegram';if(messenger)trackEvent('messenger_clicked',{messenger,context:el.closest('.sendChoices')?'Міні-консультація':el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':'Сайт'});if(text.includes('Подзвонити')||text==='Дзвінок')trackEvent('call_clicked',{context:el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':'Сайт'})});"
-          if click_js not in s:
-              s = s.replace('ask()</script>', click_js + 'ask()</script>', 1)
-
+          s = s.replace(old, new, 1)
           p.write_text(s)
           PY
       - name: Commit change
@@ -51,5 +36,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Wire Telegram analytics events [skip ci]' || exit 0
+          git commit -m 'Include lead name and phone in analytics [skip ci]' || exit 0
           git push
