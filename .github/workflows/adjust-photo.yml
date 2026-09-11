@@ -14,15 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Lower portrait slightly
+      - name: Refine hero actions and quick help card
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          s = s.replace('gap:16px;padding-top:0;transform:translateY(-82px)', 'gap:16px;padding-top:0;transform:translateY(-22px)')
-          s = s.replace('align-items:flex-end;transform:translateY(-28px)}.person{', 'align-items:flex-end;transform:translateY(2px)}.person{')
-          s = s.replace('gap:14px;transform:translateY(-18px)}.person{', 'gap:14px;transform:translateY(2px)}.person{')
+          s = s.replace('.light{background:#fff;border:1px solid var(--l)}', '.light{background:#fff;border:1px solid var(--l);color:var(--i)}')
+          old_glass = '.glass{position:relative;z-index:2;left:auto;right:auto;bottom:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:19px;backdrop-filter:blur(14px);max-width:345px;width:100%;margin:0}'
+          new_glass = '.glass{position:relative;z-index:2;left:auto;right:auto;bottom:auto;background:linear-gradient(145deg,rgba(35,38,45,.94),rgba(22,24,29,.88));border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:18px 18px 17px;backdrop-filter:blur(12px);max-width:345px;width:100%;margin:0;box-shadow:0 18px 38px rgba(0,0,0,.22);border-left:4px solid var(--r)}.glass .miniTag{font-size:11px;letter-spacing:.14em;font-weight:900;color:#ff6a88;margin-bottom:8px}.glass b{display:block;font-size:20px;line-height:1.2}.glass p{margin:10px 0 16px!important;color:#dfe2e7!important;font-size:15px;line-height:1.45}.glass .btn{width:100%;background:var(--r);color:#fff;border:0;padding:12px 14px}'
+          s = s.replace(old_glass, new_glass)
+          old_html = '<div class="glass"><b>Потрібна допомога з технікою?</b><p style="color:#dfe2e7">За 1–2 хвилини сформуємо структуроване звернення для інженера.</p><a class="btn light" href="#consult">🤖 Міні-консультація</a></div>'
+          new_html = '<div class="glass"><div class="miniTag">ШВИДКА ДОПОМОГА</div><b>Проблема з технікою?</b><p>Відповідайте на кілька коротких питань — сформуємо звернення для Андрія.</p><a class="btn" href="#consult">🤖 Почати міні-консультацію</a></div>'
+          s = s.replace(old_html, new_html)
+          s = s.replace('>Viber</a>', '>💬 Viber</a>')
+          s = s.replace('>WhatsApp</a>', '>🟢 WhatsApp</a>')
           p.write_text(s)
           PY
       - name: Commit change
@@ -30,5 +36,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Lower hero portrait slightly [skip ci]' || exit 0
+          git commit -m 'Fix hero buttons and redesign quick help card [skip ci]' || exit 0
           git push
