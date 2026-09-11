@@ -1,0 +1,34 @@
+name: Adjust hero portrait
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/adjust-photo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  adjust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move portrait higher
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          s = s.replace('top:-180px;bottom:auto;width:min(380px,100%)','top:-330px;bottom:auto;width:min(380px,100%)')
+          s = s.replace('top:-135px;bottom:auto;width:min(320px,58%)','top:-240px;bottom:auto;width:min(320px,58%)')
+          s = s.replace('top:-105px;bottom:auto;width:56%','top:-180px;bottom:auto;width:56%')
+          p.write_text(s)
+          PY
+      - name: Commit change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Move hero portrait three steps higher [skip ci]' || exit 0
+          git push
