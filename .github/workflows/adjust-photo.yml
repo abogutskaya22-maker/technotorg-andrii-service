@@ -1,4 +1,4 @@
-name: Restore Technotorg header logo
+name: Mobile consultation modal
 
 on:
   push:
@@ -14,21 +14,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Restore official logo in header
+      - name: Make mini consultation a mobile popup
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
 
           p = Path('index.html')
           s = p.read_text()
 
-          logo = 'data:image/png;base64,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'
+          # Base controls for the mobile consultation modal.
+          s = s.replace(
+              '.chatTop{padding:17px 19px;border-bottom:1px solid var(--l);font-weight:850}',
+              '.chatTop{padding:17px 19px;border-bottom:1px solid var(--l);font-weight:850;display:flex;align-items:center;justify-content:space-between;gap:12px}.chatClose,.mobileConsultBtn{display:none}'
+          )
 
-          new_header = f'<a class="logo" href="https://technotorg.com" target="_blank" rel="noopener" aria-label="Техноторг"><img src="{logo}" alt="Техноторг"></a>'
-          s, n = re.subn(r'<a class="logo" href="https://technotorg\.com"[^>]*><img src="data:image/png;base64,[^"]+" alt="Техноторг"></a>', new_header, s, count=1)
-          if n != 1:
-              raise SystemExit('Header logo block not found')
+          # Add a compact mobile CTA in the intro card.
+          old_intro = '<p><b>Анна</b> — AI-асистентка Андрія. Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.</p></div><div class="chat"><div class="chatTop">🤖 Анна · AI-асистентка Андрія</div>'
+          new_intro = '<p><b>Анна</b> — AI-асистентка Андрія. Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.</p><button class="btn red mobileConsultBtn" type="button" onclick="openConsult()">🤖 Відкрити міні-консультацію</button></div><div class="chat"><div class="chatTop"><span>🤖 Анна · AI-асистентка Андрія</span><button class="chatClose" type="button" onclick="closeConsult()" aria-label="Закрити">×</button></div>'
+          if old_intro not in s:
+              raise SystemExit('Consult intro target not found')
+          s = s.replace(old_intro, new_intro, 1)
+
+          # Open the chat as a popup from hero and the sticky mobile bar.
+          s = s.replace('<a class="btn outline quick" href="#consult">🤖 Міні-консультація</a>', '<button class="btn outline quick" type="button" onclick="openConsult()">🤖 Міні-консультація</button>', 1)
+          s = s.replace('<a href="#consult"><span>🤖</span>Консультація</a>', '<button type="button" onclick="openConsult()"><span>🤖</span>Консультація</button>', 1)
+
+          # Mobile-only modal presentation: full-screen backdrop, bottom-sheet chat, no inline chat.
+          mobile_css = '''@media(max-width:600px){#consult .chat{display:none}#consult .mobileConsultBtn{display:inline-flex;margin-top:18px}#consult.mobileOpen{position:fixed;inset:0;z-index:140;background:rgba(10,12,16,.66);padding:10px;display:flex;align-items:flex-end}#consult.mobileOpen .wrap.consult{width:100%;margin:0;display:block}#consult.mobileOpen .intro{display:none}#consult.mobileOpen .chat{display:flex;width:100%;height:min(82dvh,650px);max-height:82dvh;border-radius:24px 24px 18px 18px;box-shadow:0 24px 70px rgba(0,0,0,.35)}#consult.mobileOpen .chatClose{display:grid;place-items:center;width:34px;height:34px;flex:0 0 34px;border:0;border-radius:50%;background:#f1f2f4;color:var(--i);font-size:22px;line-height:1;cursor:pointer}body.consultOpen{overflow:hidden}.mobileConsultBtn{width:100%}}'''
+          s = s.replace('</style>', mobile_css + '</style>', 1)
+
+          # Responsive opener: modal on phone, smooth scroll on larger screens.
+          marker = "const ICONS="
+          js = "function openConsult(){const el=document.getElementById('consult');if(window.matchMedia('(max-width:600px)').matches){el.classList.add('mobileOpen');document.body.classList.add('consultOpen');setTimeout(()=>{const box=document.getElementById('msgs');if(box)box.scrollTop=box.scrollHeight},50)}else{el.scrollIntoView({behavior:'smooth',block:'start'})}}function closeConsult(){document.getElementById('consult').classList.remove('mobileOpen');document.body.classList.remove('consultOpen');if(document.activeElement)document.activeElement.blur()}"
+          if marker not in s:
+              raise SystemExit('Script marker not found')
+          s = s.replace(marker, js + marker, 1)
 
           p.write_text(s)
           PY
@@ -37,5 +57,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Restore official Technotorg header logo [skip ci]' || exit 0
+          git commit -m 'Open mini consultation in mobile modal [skip ci]' || exit 0
           git push
