@@ -1,4 +1,4 @@
-name: Direct messenger consultation links
+name: Copy consultation text for Viber
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Open direct chat with prefilled consultation text
+      - name: Copy consultation text then open direct Viber chat
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,19 +22,14 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          old = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberShare=`viber://forward?text=${txt}`;let telegramShare=`https://t.me/share/url?url=&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" target=\"_blank\" href=\"${telegramShare}\">${ICONS.telegram}Telegram</a></div>`}"
+          old = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberDirect=`viber://chat?number=%2B380665628743&text=${txt}`;let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberDirect}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
 
-          new = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberDirect=`viber://chat?number=%2B380665628743&text=${txt}`;let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberDirect}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
+          new = "async function openViberConsult(){const text=rawSummary();try{await navigator.clipboard.writeText(text);b('Текст скопійовано ✅ Вставте його у Viber.')}catch(e){b('Відкриваю Viber. Якщо текст не вставився автоматично, скопіюйте підсумок звернення вище.')}setTimeout(()=>{location.href=VIBER},650)}function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><button class=\"btn light\" type=\"button\" onclick=\"openViberConsult()\">${ICONS.viber}Viber</button><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
 
-          if old in s:
-              s = s.replace(old, new, 1)
-          else:
-              # Handle the intermediate Telegram-direct version as well.
-              old2 = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberShare=`viber://forward?text=${txt}`;let telegramDirect=`${TG}&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
-              if old2 not in s:
-                  raise SystemExit('Consultation messenger block not found')
-              s = s.replace(old2, new, 1)
+          if old not in s:
+              raise SystemExit('Current consultation messenger block not found')
 
+          s = s.replace(old, new, 1)
           p.write_text(s)
           PY
       - name: Commit change
@@ -42,5 +37,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Use direct consultation messenger links [skip ci]' || exit 0
+          git commit -m 'Copy Viber consultation text before opening chat [skip ci]' || exit 0
           git push
