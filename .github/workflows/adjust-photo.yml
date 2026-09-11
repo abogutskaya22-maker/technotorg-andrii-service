@@ -14,19 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Refine hero layout
+      - name: Lower portrait to text level
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          s = s.replace('align-items:end;overflow:hidden;position:relative', 'align-items:center;overflow:hidden;position:relative')
-          s = s.replace('.heroText{position:relative;z-index:3;padding-bottom:8px}', '.heroText{position:relative;z-index:3;padding-bottom:8px;transform:translateY(-34px)}')
-          s = s.replace('.heroVisual{position:relative;align-self:stretch;min-height:500px}', '.heroVisual{position:relative;align-self:stretch;min-height:500px;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-start;gap:16px;padding-top:12px}')
-          s = s.replace('.person{position:absolute;right:-8px;top:auto;bottom:8px;width:min(380px,100%);max-height:360px;object-fit:contain;object-position:right top;filter:drop-shadow(0 16px 26px rgba(0,0,0,.28));z-index:1}', '.person{position:relative;right:auto;top:auto;bottom:auto;width:min(360px,86%);max-height:330px;object-fit:contain;object-position:right top;filter:drop-shadow(0 16px 26px rgba(0,0,0,.28));z-index:1;flex:0 0 auto}')
-          s = s.replace('.glass{position:absolute;z-index:2;left:0;right:4px;bottom:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:19px;backdrop-filter:blur(14px);max-width:345px;margin-left:auto}', '.glass{position:relative;z-index:2;left:auto;right:auto;bottom:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:22px;padding:19px;backdrop-filter:blur(14px);max-width:345px;width:100%;margin:0}')
-          s = s.replace('@media(max-width:850px){.heroCard{grid-template-columns:1fr;min-height:820px;padding:36px 28px}.heroVisual{min-height:390px}.person{right:0;top:auto;bottom:8px;width:min(320px,58%);max-height:300px}.glass{left:0;right:auto;max-width:330px}', '@media(max-width:850px){.heroCard{grid-template-columns:1fr;min-height:820px;padding:36px 28px;align-items:start}.heroText{transform:none}.heroVisual{min-height:auto;padding-top:0;align-items:flex-end}.person{right:auto;top:auto;bottom:auto;width:min(340px,56vw);max-height:330px}.glass{left:auto;right:auto;max-width:330px;align-self:flex-start}')
-          s = s.replace('@media(max-width:600px){nav{height:62px}.logo{font-size:18px}.mark{width:36px;height:36px;border-width:3px}.hero{padding-top:17px}.heroCard{padding:27px 19px;min-height:760px;border-radius:25px}.heroVisual{min-height:320px}.person{right:-2px;top:auto;bottom:8px;width:56%;max-height:250px}.glass{max-width:285px;padding:16px}', '@media(max-width:600px){nav{height:62px}.logo{font-size:18px}.mark{width:36px;height:36px;border-width:3px}.hero{padding-top:17px}.heroCard{padding:27px 19px;min-height:auto;border-radius:25px;gap:26px}.heroVisual{min-height:auto;padding-top:0;gap:14px}.person{right:auto;top:auto;bottom:auto;width:52vw;max-width:260px;max-height:none;align-self:flex-end}.glass{max-width:none;width:100%;padding:16px;align-self:stretch}')
+          s = s.replace('.heroCard{min-height:590px;', '.heroCard{min-height:690px;')
+          s = s.replace('gap:16px;padding-top:12px}.person{', 'gap:16px;padding-top:110px}.person{')
           p.write_text(s)
           PY
       - name: Commit change
@@ -34,5 +29,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Refine hero layout and mobile portrait [skip ci]' || exit 0
+          git commit -m 'Lower hero portrait to text level [skip ci]' || exit 0
           git push
