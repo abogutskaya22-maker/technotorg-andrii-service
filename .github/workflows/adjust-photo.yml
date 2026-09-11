@@ -1,4 +1,4 @@
-name: Copy consultation text for Viber
+name: Add phone to mini consultation
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Copy consultation text then open direct Viber chat
+      - name: Add phone step after name with UA validation
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,14 +22,28 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          old = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberDirect=`viber://chat?number=%2B380665628743&text=${txt}`;let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberDirect}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
+          s = s.replace("const s={step:0,name:'',machine:'',brand:'',model:'',issue:'',error:''}", "const s={step:0,name:'',phone:'',machine:'',brand:'',model:'',issue:'',error:''}", 1)
 
-          new = "async function openViberConsult(){const text=rawSummary();try{await navigator.clipboard.writeText(text);b('Текст скопійовано ✅ Вставте його у Viber.')}catch(e){b('Відкриваю Viber. Якщо текст не вставився автоматично, скопіюйте підсумок звернення вище.')}setTimeout(()=>{location.href=VIBER},650)}function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><button class=\"btn light\" type=\"button\" onclick=\"openViberConsult()\">${ICONS.viber}Viber</button><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
+          old_ask = "function ask(){c.innerHTML='';i.value='';i.disabled=false;if(s.step===0){b('Вітаю! Я <b>Анна</b>, AI-асистентка сервісного інженера Андрія 👋<br>Як до Вас можна звертатися?')}else if(s.step===1){b(`Дуже приємно, ${esc(s.name)}! Яка техніка потребує допомоги?`);ch(['Трактор','Комбайн','Обприскувач','Інше'])}else if(s.step===2){b('Вкажіть марку техніки.');ch(['New Holland','Case IH','Agrifac','Інша'])}else if(s.step===3)b('Яка модель?');else if(s.step===4)b('Коротко опишіть проблему.');else if(s.step===5){b('Вкажіть код помилки');ch(['Немає','Не знаю'])}else finish()}"
+          new_ask = "function ask(){c.innerHTML='';i.value='';i.disabled=false;if(s.step===0){b('Вітаю! Я <b>Анна</b>, AI-асистентка сервісного інженера Андрія 👋<br>Як до Вас можна звертатися?')}else if(s.step===1){b(`Дуже приємно, ${esc(s.name)}! Вкажіть, будь ласка, номер телефону для зв’язку з Андрієм.`);i.inputMode='tel';i.placeholder='+380XXXXXXXXX або 0XXXXXXXXX'}else if(s.step===2){i.inputMode='text';i.placeholder='Напишіть відповідь…';b('Яка техніка потребує допомоги?');ch(['Трактор','Комбайн','Обприскувач','Інше'])}else if(s.step===3){b('Вкажіть марку техніки.');ch(['New Holland','Case IH','Agrifac','Інша'])}else if(s.step===4)b('Яка модель?');else if(s.step===5)b('Коротко опишіть проблему.');else if(s.step===6){b('Вкажіть код помилки');ch(['Немає','Не знаю'])}else finish()}"
+          if old_ask not in s:
+              raise SystemExit('ask() block not found')
+          s = s.replace(old_ask, new_ask, 1)
 
-          if old not in s:
-              raise SystemExit('Current consultation messenger block not found')
+          old_ans = "function ans(t){b(esc(t),'user');['name','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t});s.step++;setTimeout(ask,150)}"
+          new_ans = "function ans(t){if(s.step===1){const phone=t.replace(/[\\s()\-]/g,'');if(!/^(?:\\+380\\d{9}|0\\d{9})$/.test(phone)){b('Перевірте номер, будь ласка. Введіть у форматі <b>+380XXXXXXXXX</b> або <b>0XXXXXXXXX</b>.');i.value='';return}t=phone}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t});s.step++;setTimeout(ask,150)}"
+          if old_ans not in s:
+              raise SystemExit('ans() block not found')
+          s = s.replace(old_ans, new_ans, 1)
 
-          s = s.replace(old, new, 1)
+          old_summary = "function rawSummary(){return `Добрий день, Андрію!\\nМене звати ${s.name}. Потрібна консультація.\\n\\nТехніка: ${s.machine}\\nМарка: ${s.brand}\\nМодель: ${s.model}\\nПроблема: ${s.issue}\\nКод помилки: ${s.error}`}"
+          new_summary = "function rawSummary(){return `Добрий день, Андрію!\\nМене звати ${s.name}. Потрібна консультація.\\nТелефон: ${s.phone}\\n\\nТехніка: ${s.machine}\\nМарка: ${s.brand}\\nМодель: ${s.model}\\nПроблема: ${s.issue}\\nКод помилки: ${s.error}`}"
+          if old_summary not in s:
+              raise SystemExit('rawSummary() block not found')
+          s = s.replace(old_summary, new_summary, 1)
+
+          s = s.replace("Техніка: ${esc(s.machine)}<br>Марка:", "Телефон: ${esc(s.phone)}<br>Техніка: ${esc(s.machine)}<br>Марка:", 1)
+
           p.write_text(s)
           PY
       - name: Commit change
@@ -37,5 +51,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Copy Viber consultation text before opening chat [skip ci]' || exit 0
+          git commit -m 'Add phone field to mini consultation [skip ci]' || exit 0
           git push
