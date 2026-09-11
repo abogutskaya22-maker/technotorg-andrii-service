@@ -14,15 +14,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Move portrait slightly higher
+      - name: Align portrait with action buttons
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          s = s.replace('top:-420px;bottom:auto;width:min(380px,100%)','top:-450px;bottom:auto;width:min(380px,100%)')
-          s = s.replace('top:-310px;bottom:auto;width:min(320px,58%)','top:-335px;bottom:auto;width:min(320px,58%)')
-          s = s.replace('top:-235px;bottom:auto;width:56%','top:-255px;bottom:auto;width:56%')
+          s = s.replace('top:-450px;bottom:auto;width:min(380px,100%)','top:auto;bottom:8px;width:min(380px,100%)')
+          s = s.replace('top:-335px;bottom:auto;width:min(320px,58%)','top:auto;bottom:8px;width:min(320px,58%)')
+          s = s.replace('top:-255px;bottom:auto;width:56%','top:auto;bottom:8px;width:56%')
           p.write_text(s)
           PY
       - name: Commit change
@@ -30,5 +30,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Nudge hero portrait a little higher [skip ci]' || exit 0
+          git commit -m 'Align hero portrait with call buttons [skip ci]' || exit 0
           git push
