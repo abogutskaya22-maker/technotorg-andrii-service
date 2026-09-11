@@ -1,4 +1,4 @@
-name: Fix Telegram consultation link
+name: Direct messenger consultation links
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Open Telegram chat directly by phone with prefilled text
+      - name: Open direct chat with prefilled consultation text
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,13 +22,19 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          old = "let telegramShare=`https://t.me/share/url?url=&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" target=\"_blank\" href=\"${telegramShare}\">${ICONS.telegram}Telegram</a></div>`}"
-          new = "let telegramDirect=`${TG}&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
+          old = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberShare=`viber://forward?text=${txt}`;let telegramShare=`https://t.me/share/url?url=&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" target=\"_blank\" href=\"${telegramShare}\">${ICONS.telegram}Telegram</a></div>`}"
 
-          if old not in s:
-              raise SystemExit('Telegram share block not found')
+          new = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberDirect=`viber://chat?number=%2B380665628743&text=${txt}`;let telegramDirect=`https://t.me/+380665628743?text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberDirect}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
 
-          s = s.replace(old, new, 1)
+          if old in s:
+              s = s.replace(old, new, 1)
+          else:
+              # Handle the intermediate Telegram-direct version as well.
+              old2 = "function finish(){i.disabled=true;let sum=`<b>Готово, ${esc(s.name)} ✅</b><br><br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код: ${esc(s.error)}<br><br>Куди зручніше надіслати звернення?`;b(sum);let txt=encodeURIComponent(rawSummary());let viberShare=`viber://forward?text=${txt}`;let telegramDirect=`${TG}&text=${txt}`;c.innerHTML=`<div class=\"sendChoices\"><a class=\"btn light\" target=\"_blank\" href=\"${WA}?text=${txt}\">${ICONS.whatsapp}WhatsApp</a><a class=\"btn light\" href=\"${viberShare}\">${ICONS.viber}Viber</a><a class=\"btn light\" href=\"${telegramDirect}\">${ICONS.telegram}Telegram</a></div>`}"
+              if old2 not in s:
+                  raise SystemExit('Consultation messenger block not found')
+              s = s.replace(old2, new, 1)
+
           p.write_text(s)
           PY
       - name: Commit change
@@ -36,5 +42,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Open Telegram consultation directly by phone [skip ci]' || exit 0
+          git commit -m 'Use direct consultation messenger links [skip ci]' || exit 0
           git push
