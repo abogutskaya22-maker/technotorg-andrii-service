@@ -14,14 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Lower portrait to text level
+      - name: Lower portrait by 200px
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          s = s.replace('.heroCard{min-height:590px;', '.heroCard{min-height:690px;')
-          s = s.replace('gap:16px;padding-top:12px}.person{', 'gap:16px;padding-top:110px}.person{')
+          s = s.replace('gap:16px;padding-top:0;transform:translateY(-82px)', 'gap:16px;padding-top:0;transform:translateY(118px)')
           p.write_text(s)
           PY
       - name: Commit change
@@ -29,5 +28,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Lower hero portrait to text level [skip ci]' || exit 0
+          git commit -m 'Lower hero portrait by 200px [skip ci]' || exit 0
           git push
