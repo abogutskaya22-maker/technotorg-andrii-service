@@ -1,4 +1,4 @@
-name: Refine assistant chat
+name: Refine contact block
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Rename assistant and lock chat height
+      - name: Update contact CTA and Technotorg brand mark
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,24 +22,15 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          # Assistant name.
-          s = s.replace('Олена', 'Анна')
-          s = s.replace('Мія', 'Анна')
-          s = s.replace('Макс', 'Анна')
+          s = s.replace(
+              '<button type="button" onclick="openSheet(\'callSheet\')"><span>📞 Обрати номер для дзвінка</span><span>→</span></button>',
+              '<button type="button" onclick="openSheet(\'callSheet\')"><span>📞 Подзвонити</span><span>→</span></button>'
+          )
 
-          # Keep the chat at a fixed height and scroll messages inside it.
-          s = s.replace(
-              '.chat{background:#fff;border:1px solid var(--l);border-radius:28px;overflow:hidden;min-height:500px;display:flex;flex-direction:column}',
-              '.chat{background:#fff;border:1px solid var(--l);border-radius:28px;overflow:hidden;height:500px;min-height:0;max-height:500px;display:flex;flex-direction:column}'
-          )
-          s = s.replace(
-              '.msgs{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1}',
-              '.msgs{padding:20px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}'
-          )
-          s = s.replace(
-              '.chat{min-height:470px}',
-              '.chat{height:470px;min-height:0;max-height:470px}'
-          )
+          logo = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHQAAAB2CAYAAAAZUrcsAAAE40lEQVR42u2dzY3bMBCFJWILUAmuQFjAKSDHFOGztwMXsR2szy4ixxQQAwtX4BLcgXIRF1rH5u/McEi9d0ngwLGkj29+KIrqp2nqoHZkcAkAFAJQCEAhAIUAFEAh3XpZy4nezpfpejzZv3fDduyG7dh1Xddt9rseQCsDeTtf7j9ffja1ArVveaboejx9udKnYTt2rx/v1UNtOoeGwrSOvR5PE4AqdmfKALidLxOAVu5Oiu8BKHMhhD60LaBFvgugTLL9JRwKVT8YWnVoD6CNabPfpX6vB1CdQPtYt6UOAgAVdGko1M1+18Qkfb+GVX+uOd1hO1rwmJyvccLB9pnWua2AXCVQ9KEQgEJlpW7FAvfE+jJncv5WqdysCujn22HinByfVyV8wfx8O3CezvT68S4O1mhyZu13Oh60S23n0HnBFsrqrmNb7iIKlDnEVedeDqhGECacKQDVSMFsLT9qhWoEDhgwA6BStVCGG2btq+hy2yTpipgb6KNK92kj3sL9yIwOgCT0vnC6M/Y7m/0uGypFVOC+pfYsvF6Pp27YjlPO7xoumM8uKnc+TVmpcK/Xj/eec4bHdQ1yByMXUNcFV5W7Ssi1MiI39BoOd3pCWVM3lDOiAEvVa1pzZ0UVsDM1pIZeI+XOltbtELrUGXpTXGoE3QmYCaG3GFCfO6H40JviUgN3qqh6k1ocNqBwZ75LVQFN7bkg/8CPDbtUDoU7811KUhwZApgT3MlfHBUPuWt+ipqpOJqkHAqgAsWRiEPXvNuIdGQLzaO5QFHdCik0jxrJUQbx51EWhwJouTxqJMIARBPhQq43Qm5jedRk/OeocBWKy6GocAtFODzBDYeiIFpVUYSCqMEcClUIlOJWD0SfzuDQxqpfAEXI9feamHSAQyENORQtykraFlS6PNevWMgF0Eodil6UXp7na/siQFHplqlwKYD2jpEGCmkOLQcUla5cuA1dRZkNlOohG0hJ24LVCfzhNuahL5K2JXe1N+TfPUYUKMIue4XbiwJNCSPQd3dSPWNLFXJJN36AChZFISNJ2qXPBpfGFsvnztiHvgzhRVTl0vtjGbbjt8+ebecqvY0A9e4xpO8+c70LZX5nClocRneSF0WuTYypNvhdQ9+Z6k6WKtd1IJR7q7fcd+aEfZa2xXVAn2+H1UP17bqd8/Q7F9AevWkyTB1ty71cu0yuNZ/OrwpzVua5e1OwvuE3ZDSuaXONPz9+OS/2z7+/y25rExJ6fRMOa3Gq71VhroimBqiF6tvHrmWoc28+ebYAIrsNKbLQ2pfoW4VqJ1p8MCnTjgjQYTv2vpDSGtSQNwhzvCWDtSiKLZLsSdY+RRj6dieKIqgo0JiTrbUCDnm1JuegFX+p+gzJC3X+92m+S9K34kruCCTu0JgcU4Nb7WRByNMCEudRDGhMiNIINgak5LEXBxoTru76tiKhOBaknTSQOlYVQFOgSo78FIiLtkR04KkBmgvWLjGhcK69vZcCsXR6UAfUQp3XIeVOaPz35xL27Xz59jsUj0GWzvMqgea6NaRliKmytYZXFX1obM+62e/IwVJKC8gqgD4Cu5h0KApxUW2r6o+rALoEay+kNFzNEKsF6oJLUUTVCrEJoI/g3rcdIdXrXQW8/LzKOz6qq1woXtgaDkAhAIUAFAJQCEABFFKufwnmYPVFENhCAAAAAElFTkSuQmCC'
+          old = '<a href="https://technotorg.com"><span class="contactLabel"><span class="brandIcon"><img src="https://technotorg.com/favicon.ico" alt="Техноторг"></span>technotorg.com</span><span>↗</span></a>'
+          new = f'<a href="https://technotorg.com" target="_blank" rel="noopener"><span class="contactLabel"><span class="brandIcon"><img src="{logo}" alt="Техноторг"></span>Техноторг</span><span>↗</span></a>'
+          s = s.replace(old, new)
 
           p.write_text(s)
           PY
@@ -48,5 +39,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Rename assistant to Anna and make chat scrollable [skip ci]' || exit 0
+          git commit -m 'Refine contact button and Technotorg link [skip ci]' || exit 0
           git push
