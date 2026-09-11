@@ -32,3 +32,5 @@ jobs:
           git add index.html
           git commit -m 'Move hero portrait three steps higher [skip ci]' || exit 0
           git push
+
+# trigger update
