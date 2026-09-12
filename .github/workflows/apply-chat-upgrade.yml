@@ -1,0 +1,59 @@
+name: Apply AI chat upgrade
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-chat-upgrade.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch stable page
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, base64
+
+          page = Path('index.html')
+          s = page.read_text()
+          helper = Path('.github/workflows/adjust-photo.yml').read_text()
+
+          found = re.search(r"encoded = '([^']+)'", helper)
+          if not found:
+              raise SystemExit('encoded chat code not found')
+          new_js = base64.b64decode(found.group(1)).decode()
+
+          old_choice = '.choice{border:1px solid var(--l);background:#fff;border-radius:999px;padding:9px 12px;font-weight:750;cursor:pointer}'
+          new_choice = '.choice{border:1px solid var(--l);background:#f8f9fa;border-radius:14px;padding:12px 14px;font-weight:800;cursor:pointer;color:var(--i);box-shadow:0 2px 8px rgba(20,20,25,.04);transition:.18s ease;min-height:46px}.choice:hover{border-color:#f2a1b5;background:#fff1f4;transform:translateY(-1px)}.choice:active{transform:translateY(0)}.choiceIcon{font-size:18px;margin-right:6px}.photoBox{width:100%;border:1px dashed #d3d7de;background:#f8f9fa;border-radius:18px;padding:15px}.photoUpload{width:100%;border:0;background:#fff1f4;color:var(--r);border-radius:14px;padding:14px 16px;font-weight:850;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px}.photoHint{font-size:12px;color:var(--m);margin-top:8px;text-align:center}.photoReady{padding:11px 13px;border-radius:13px;background:#eef9f1;color:#26733d;font-weight:800;margin-bottom:9px}.reviewActions{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%}.reviewActions .choice{width:100%}.sending{width:100%;text-align:center;color:var(--m);font-weight:700;padding:8px}'
+
+          if old_choice in s:
+              s = s.replace(old_choice, new_choice, 1)
+          elif '.photoBox{' not in s:
+              raise SystemExit('choice CSS source not found')
+
+          pattern = r"const s=\{.*?ask\(\)</script>"
+          s, count = re.subn(pattern, lambda _: new_js + '</script>', s, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit(f'chat replacement count={count}')
+
+          for marker in ['photoInput','confirmRequest(true)','service_request','Внесіть зміни у заявку','Так, все вірно']:
+              if marker not in s:
+                  raise SystemExit(f'missing marker: {marker}')
+          if "onclick=\"openSheet('callSheet')\"" not in s or 'tel:+380665628743' not in s or 'tel:+380969897456' not in s:
+              raise SystemExit('call popup damaged')
+
+          page.write_text(s)
+          PY
+      - name: Commit page upgrade
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'Enable photo and confirmation in AI request chat [skip ci]' || exit 0
+          git push
