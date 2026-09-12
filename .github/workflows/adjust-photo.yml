@@ -1,4 +1,4 @@
-name: Apply Opera request endpoint fix
+name: Apply Opera compatibility fallback
 
 on:
   push:
@@ -14,12 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch Opera-safe request submission
+      - name: Patch request flow
         run: python patch_confirm.py
+      - name: Inject compatibility fallback
+        run: python patch_compat.py
       - name: Commit change
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Use Opera-safe request endpoint [skip ci]' || exit 0
+          git commit -m 'Add Opera-safe interaction fallback [skip ci]' || exit 0
           git push
