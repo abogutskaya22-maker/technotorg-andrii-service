@@ -51,6 +51,28 @@ export default async function handler(req, res) {
   }
 
   try {
+    const photoData = typeof data.photoData === 'string' ? data.photoData : '';
+    const photoMatch = photoData.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/);
+
+    if ((event === 'service_request' || event === 'consultation_completed') && photoMatch) {
+      const mime = photoMatch[1] === 'image/jpg' ? 'image/jpeg' : photoMatch[1];
+      const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+      const bytes = Buffer.from(photoMatch[2], 'base64');
+      const form = new FormData();
+      form.append('chat_id', chatId);
+      form.append('caption', lines.join('\n').slice(0, 1000));
+      form.append('parse_mode', 'HTML');
+      form.append('photo', new Blob([bytes], { type: mime }), clean(data.photoName || `request.${ext}`, 120));
+
+      const tgPhoto = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        body: form
+      });
+      const photoResult = await tgPhoto.json();
+      if (!photoResult.ok) return res.status(502).json({ ok: false, error: 'telegram_photo_error' });
+      return res.status(200).json({ ok: true, photo: true });
+    }
+
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
