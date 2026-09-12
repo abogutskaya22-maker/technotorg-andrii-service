@@ -1,4 +1,4 @@
-name: Mini consultation creates request
+name: Fix desktop interactions and hero photo
 
 on:
   push:
@@ -14,26 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update mini consultation flow
+      - name: Fix JavaScript and refresh photo asset
         run: |
           python - <<'PY'
           from pathlib import Path
-
           p = Path('index.html')
           s = p.read_text()
 
-          s = s.replace(
-            'Вона збере ім’я, тип техніки, марку, модель, симптом та код помилки й сформує готове звернення.',
-            'Вона збере контактні дані та інформацію про техніку, після чого створить заявку для Андрія.'
-          )
+          # Fix syntax error that stopped all JS-driven buttons on desktop.
+          s = s.replace("trackEvent('page_view',{})const ICONS=", "trackEvent('page_view',{});const ICONS=", 1)
 
-          start = s.find('function finish(){')
-          end = s.find("document.addEventListener('click'", start)
-          if start == -1 or end == -1:
-              raise SystemExit('finish() block not found')
-
-          new_finish = '''function finish(){i.disabled=true;c.innerHTML='';let sum=`<b>Перевірте дані заявки ✅</b><br><br>Ім’я: ${esc(s.name)}<br>Телефон: ${esc(s.phone)}<br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код помилки: ${esc(s.error)}`;b(sum);trackEvent('service_request',{name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error});setTimeout(()=>b(`<b>Заявку створено та передано Андрію ✅</b><br>Він зв’яжеться з Вами за номером <b>${esc(s.phone)}</b>. Додатково писати в месенджер не потрібно.`),180)}'''
-          s = s[:start] + new_finish + s[end:]
+          # Bust stale desktop cache for the engineer photo while keeping the same asset.
+          s = s.replace('src="andrii-cutout.png" alt="Андрій, сервісний інженер Техноторг"', 'src="/andrii-cutout.png?v=20260912-1" alt="Андрій, сервісний інженер Техноторг"', 1)
 
           p.write_text(s)
           PY
@@ -42,5 +34,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Make mini consultation create service request [skip ci]' || exit 0
+          git commit -m 'Fix desktop buttons and refresh hero photo [skip ci]' || exit 0
           git push
