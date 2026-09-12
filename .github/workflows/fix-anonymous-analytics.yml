@@ -46,3 +46,4 @@ jobs:
           git add index.html
           git commit -m "Track anonymous analytics immediately [skip ci]"
           git push
+# trigger
