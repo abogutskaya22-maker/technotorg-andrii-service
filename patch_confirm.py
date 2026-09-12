@@ -3,6 +3,22 @@ from pathlib import Path
 p = Path("index.html")
 s = p.read_text()
 
+# User-facing wording: this is a service request, not a mini consultation.
+replacements = [
+    ("Міні-консультацію", "Залишити заявку"),
+    ("Міні консультацію", "Залишити заявку"),
+    ("Міні-консультація", "Залишити заявку"),
+    ("Міні консультація", "Залишити заявку"),
+    ("міні-консультацію", "заявку"),
+    ("міні консультацію", "заявку"),
+    ("міні-консультації", "заявки"),
+    ("міні консультації", "заявки"),
+    ("міні-консультація", "заявка"),
+    ("міні консультація", "заявка"),
+]
+for old, new in replacements:
+    s = s.replace(old, new)
+
 start = s.find("function finish(){")
 end = s.find("document.addEventListener('click'", start)
 if start == -1 or end == -1:
