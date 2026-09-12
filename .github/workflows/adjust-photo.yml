@@ -1,4 +1,4 @@
-name: Fix desktop interactions and hero photo
+name: Embed visual assets for Opera
 
 on:
   push:
@@ -14,18 +14,51 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Fix JavaScript and refresh photo asset
+      - name: Make all visual assets self-contained
         run: |
           python - <<'PY'
           from pathlib import Path
+          import base64
+          import urllib.request
+          import re
+
           p = Path('index.html')
           s = p.read_text()
 
-          # Fix syntax error that stopped all JS-driven buttons on desktop.
-          s = s.replace("trackEvent('page_view',{})const ICONS=", "trackEvent('page_view',{});const ICONS=", 1)
+          # Embed Andrii's PNG directly into HTML so Opera does not need a separate asset request.
+          photo = base64.b64encode(Path('andrii-cutout.png').read_bytes()).decode('ascii')
+          photo_uri = 'data:image/png;base64,' + photo
+          s = re.sub(
+              r'src="(?:/)?andrii-cutout\.png(?:\?[^\"]*)?"\s+alt="Андрій, сервісний інженер Техноторг"',
+              f'src="{photo_uri}" alt="Андрій, сервісний інженер Техноторг"',
+              s,
+              count=1
+          )
 
-          # Bust stale desktop cache for the engineer photo while keeping the same asset.
-          s = s.replace('src="andrii-cutout.png" alt="Андрій, сервісний інженер Техноторг"', 'src="/andrii-cutout.png?v=20260912-1" alt="Андрій, сервісний інженер Техноторг"', 1)
+          # Embed brand icons as data URIs. This removes CDN/Wikimedia blocking in Opera.
+          urls = [
+              'https://cdn.simpleicons.org/viber/7360F2',
+              'https://cdn.simpleicons.org/whatsapp/25D366',
+              'https://cdn.simpleicons.org/telegram/26A5E4',
+              'https://cdn.simpleicons.org/vodafone/E60000',
+              'https://upload.wikimedia.org/wikipedia/commons/d/d5/Kyivstar_logo.svg',
+          ]
+          for url in urls:
+              try:
+                  req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+                  data = urllib.request.urlopen(req, timeout=20).read()
+                  mime = 'image/svg+xml' if (url.endswith('.svg') or data.lstrip().startswith(b'<svg')) else 'image/png'
+                  uri = f'data:{mime};base64,' + base64.b64encode(data).decode('ascii')
+                  s = s.replace(url, uri)
+              except Exception as e:
+                  print('Icon embed skipped:', url, e)
+
+          # Explicitly end the page-view call for older/stricter JS parsers.
+          s = s.replace("trackEvent('page_view',{})const ICONS=", "trackEvent('page_view',{});const ICONS=")
+
+          # Prevent stale HTML from surviving browser reloads.
+          if 'http-equiv="Cache-Control"' not in s:
+              s = s.replace('<meta name="theme-color" content="#d91846">', '<meta name="theme-color" content="#d91846"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">', 1)
 
           p.write_text(s)
           PY
@@ -34,5 +67,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Fix desktop buttons and refresh hero photo [skip ci]' || exit 0
+          git commit -m 'Embed photo and brand icons for Opera [skip ci]' || exit 0
           git push
