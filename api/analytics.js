@@ -13,17 +13,23 @@ export default async function handler(req, res) {
   const ts = safeDate.toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
 
   const clean = (v, max = 500) => String(v ?? '—').replace(/[<>]/g, '').slice(0, max);
+
+  // Міні-консультація тепер створює одну повноцінну заявку.
+  // Технічні події входу/відкриття консультації в Telegram не надсилаємо.
+  if (event === 'page_view' || event === 'consultation_started') {
+    return res.status(200).json({ ok: true, skipped: true });
+  }
+
   const labels = {
-    page_view: '👀 Відвідування сайту',
-    consultation_started: '🤖 Початок міні-консультації',
-    consultation_completed: '✅ Міні-консультацію завершено',
+    service_request: '🆕 Нова заявка з сайту',
+    consultation_completed: '🆕 Нова заявка з сайту',
     messenger_clicked: '💬 Перехід у месенджер',
     call_clicked: '📞 Натиснули дзвінок'
   };
 
   let lines = [`<b>${labels[event] || '📊 Подія сайту'}</b>`, `🕒 ${clean(ts)}`];
 
-  if (event === 'consultation_completed') {
+  if (event === 'service_request' || event === 'consultation_completed') {
     lines.push(
       `👤 Ім’я: ${clean(data.name, 120)}`,
       `📱 Телефон: ${clean(data.phone, 80)}`,
@@ -31,7 +37,9 @@ export default async function handler(req, res) {
       `🏷 Марка: ${clean(data.brand, 120)}`,
       `🔢 Модель: ${clean(data.model, 160)}`,
       `⚠️ Проблема: ${clean(data.issue, 700)}`,
-      `🧾 Код помилки: ${clean(data.error, 160)}`
+      `🧾 Код помилки: ${clean(data.error, 160)}`,
+      '',
+      '📌 Статус: нова заявка — потрібно зв’язатися з клієнтом'
     );
   } else {
     if (data.name) lines.push(`👤 Ім’я: ${clean(data.name, 120)}`);
@@ -39,7 +47,7 @@ export default async function handler(req, res) {
 
     if (event === 'messenger_clicked') {
       lines.push(`📲 Месенджер: ${clean(data.messenger, 40)}`, `📍 Звідки: ${clean(data.context, 80)}`);
-    } else if (event === 'call_clicked' || event === 'consultation_started') {
+    } else if (event === 'call_clicked') {
       lines.push(`📍 Звідки: ${clean(data.context, 80)}`);
     }
   }
