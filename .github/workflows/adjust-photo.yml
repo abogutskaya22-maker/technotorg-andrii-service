@@ -1,4 +1,4 @@
-name: Bind analytics history to lead
+name: Fix call popup and request button
 
 on:
   push:
@@ -10,11 +10,11 @@ permissions:
   contents: write
 
 jobs:
-  refine:
+  fix-actions:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Buffer pre-lead events and attach them after phone identification
+      - name: Repair button JavaScript and rename consultation CTA
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,24 +22,33 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
 
-          old_track = "function trackEvent(event,data={}){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data}),keepalive:true}).catch(()=>{})}catch(e){}}"
-          new_track = "const analyticsLead={name:'',phone:'',identified:false,queue:[]};function postAnalytics(event,data={},occurredAt=new Date().toISOString()){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data,occurredAt}),keepalive:true}).catch(()=>{})}catch(e){}}function trackEvent(event,data={}){const occurredAt=new Date().toISOString();if(!analyticsLead.identified){analyticsLead.queue.push({event,data,occurredAt});return}postAnalytics(event,{...data,name:analyticsLead.name,phone:analyticsLead.phone},occurredAt)}function identifyLead(name,phone){analyticsLead.name=name;analyticsLead.phone=phone;analyticsLead.identified=true;const queued=analyticsLead.queue.splice(0);queued.forEach(x=>postAnalytics(x.event,{...x.data,name,phone},x.occurredAt))}trackEvent('page_view',{})"
-          if old_track not in s:
-              raise SystemExit('trackEvent block not found')
-          s = s.replace(old_track, new_track, 1)
+          # Fix the JavaScript parse error that prevents all onclick handlers from loading.
+          s = s.replace("trackEvent('page_view',{})const ICONS=", "trackEvent('page_view',{});const ICONS=", 1)
 
-          old_phone = "t=phone}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t})"
-          new_phone = "t=phone;identifyLead(s.name,t)}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t})"
-          if old_phone not in s:
-              raise SystemExit('phone identification point not found')
-          s = s.replace(old_phone, new_phone, 1)
+          # Rename the primary consultation CTA while keeping the existing AI-chat handler.
+          s = s.replace('>🤖 Міні-консультація</button>', '>🤖 Залишити заявку</button>')
+          s = s.replace('>🤖 Відкрити міні-консультацію</button>', '>🤖 Залишити заявку</button>')
+
+          # Keep the mobile bottom action consistent.
+          s = s.replace('<span>🤖</span>Консультація</button>', '<span>🤖</span>Заявка</button>')
+
+          if "trackEvent('page_view',{})const ICONS=" in s:
+              raise SystemExit('JavaScript parse error is still present')
+          if '>🤖 Міні-консультація</button>' in s:
+              raise SystemExit('Primary CTA rename did not apply')
+          if "onclick=\"openSheet('callSheet')\"" not in s:
+              raise SystemExit('Call-sheet handler missing')
+          if 'id="callSheet"' not in s or 'tel:+380665628743' not in s or 'tel:+380969897456' not in s:
+              raise SystemExit('Two-number call sheet is incomplete')
+          if 'onclick="openConsult()"' not in s:
+              raise SystemExit('AI consultation handler missing')
 
           p.write_text(s)
           PY
-      - name: Commit change
+      - name: Commit repaired page
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Attach pre-lead analytics history after phone identification [skip ci]' || exit 0
+          git commit -m 'Repair call popup and AI request button [skip ci]' || exit 0
           git push
