@@ -15,15 +15,16 @@ export default async function handler(req, res) {
   const clean = (v, max = 500) => String(v ?? '—').replace(/[<>]/g, '').slice(0, max);
   const labels = {
     page_view: '👀 Відвідування сайту',
-    consultation_started: '🤖 Початок міні-консультації',
-    consultation_completed: '✅ Міні-консультацію завершено',
+    consultation_started: '🤖 Початок заявки',
+    consultation_completed: '✅ Заявку сформовано',
+    service_request: '🆕 Нова заявка з сайту',
     messenger_clicked: '💬 Перехід у месенджер',
     call_clicked: '📞 Натиснули дзвінок'
   };
 
   let lines = [`<b>${labels[event] || '📊 Подія сайту'}</b>`, `🕒 ${clean(ts)}`];
 
-  if (event === 'consultation_completed') {
+  if (event === 'consultation_completed' || event === 'service_request') {
     lines.push(
       `👤 Ім’я: ${clean(data.name, 120)}`,
       `📱 Телефон: ${clean(data.phone, 80)}`,
@@ -33,6 +34,8 @@ export default async function handler(req, res) {
       `⚠️ Проблема: ${clean(data.issue, 700)}`,
       `🧾 Код помилки: ${clean(data.error, 160)}`
     );
+    if (data.changes) lines.push(`📝 Уточнення / зміни: ${clean(data.changes, 700)}`);
+    lines.push('', '📌 Статус: нова заявка — потрібно зв’язатися з клієнтом');
   } else {
     if (data.name) lines.push(`👤 Ім’я: ${clean(data.name, 120)}`);
     if (data.phone) lines.push(`📱 Телефон: ${clean(data.phone, 80)}`);
@@ -45,6 +48,27 @@ export default async function handler(req, res) {
   }
 
   try {
+    const photoData = typeof data.photoData === 'string' ? data.photoData : '';
+    const photoMatch = photoData.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/);
+
+    if ((event === 'service_request' || event === 'consultation_completed') && photoMatch) {
+      const mime = photoMatch[1] === 'image/jpg' ? 'image/jpeg' : photoMatch[1];
+      const bytes = Buffer.from(photoMatch[2], 'base64');
+      const form = new FormData();
+      form.append('chat_id', chatId);
+      form.append('caption', lines.join('\n').slice(0, 1000));
+      form.append('parse_mode', 'HTML');
+      form.append('photo', new Blob([bytes], { type: mime }), clean(data.photoName || 'request.jpg', 120));
+
+      const tgPhoto = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        body: form
+      });
+      const photoResult = await tgPhoto.json();
+      if (!photoResult.ok) return res.status(502).json({ ok: false, error: 'telegram_photo_error', description: photoResult.description || '' });
+      return res.status(200).json({ ok: true, photo: true });
+    }
+
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -56,9 +80,9 @@ export default async function handler(req, res) {
       })
     });
     const result = await tg.json();
-    if (!result.ok) return res.status(502).json({ ok: false, error: 'telegram_error' });
+    if (!result.ok) return res.status(502).json({ ok: false, error: 'telegram_error', description: result.description || '' });
     return res.status(200).json({ ok: true });
-  } catch {
-    return res.status(500).json({ ok: false, error: 'analytics_failed' });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'analytics_failed', description: String(e?.message || e) });
   }
 }
