@@ -1,8 +1,26 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ ok: false });
-
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (req.method === 'GET') {
+    const status = { configured: Boolean(token && chatId), token: Boolean(token), chatId: Boolean(chatId) };
+    if (!token || !chatId) return res.status(200).json(status);
+    try {
+      const botResp = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const botJson = await botResp.json();
+      status.botOk = Boolean(botJson && botJson.ok);
+      const chatResp = await fetch(`https://api.telegram.org/bot${token}/getChat?chat_id=${encodeURIComponent(chatId)}`);
+      const chatJson = await chatResp.json();
+      status.chatOk = Boolean(chatJson && chatJson.ok);
+      if (!status.botOk) status.botError = botJson?.description || 'unknown';
+      if (!status.chatOk) status.chatError = chatJson?.description || 'unknown';
+      return res.status(200).json(status);
+    } catch (e) {
+      return res.status(200).json({ ...status, diagnosticError: String(e?.message || e) });
+    }
+  }
+
+  if (req.method !== 'POST') return res.status(405).json({ ok: false });
   if (!token || !chatId) return res.status(503).json({ ok: false, error: 'analytics_not_configured' });
 
   const body = req.body || {};
@@ -69,7 +87,7 @@ export default async function handler(req, res) {
         body: form
       });
       const photoResult = await tgPhoto.json();
-      if (!photoResult.ok) return res.status(502).json({ ok: false, error: 'telegram_photo_error' });
+      if (!photoResult.ok) return res.status(502).json({ ok: false, error: 'telegram_photo_error', description: photoResult.description || '' });
       return res.status(200).json({ ok: true, photo: true });
     }
 
@@ -84,9 +102,9 @@ export default async function handler(req, res) {
       })
     });
     const result = await tg.json();
-    if (!result.ok) return res.status(502).json({ ok: false, error: 'telegram_error' });
+    if (!result.ok) return res.status(502).json({ ok: false, error: 'telegram_error', description: result.description || '' });
     return res.status(200).json({ ok: true });
-  } catch {
-    return res.status(500).json({ ok: false, error: 'analytics_failed' });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: 'analytics_failed', description: String(e?.message || e) });
   }
 }
