@@ -1,0 +1,48 @@
+name: Fix anonymous analytics
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-anonymous-analytics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch analytics tracking
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old = "const analyticsLead={name:'',phone:'',identified:false,queue:[]};function postAnalytics(event,data={},occurredAt=new Date().toISOString()){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data,occurredAt}),keepalive:true}).catch(()=>{})}catch(e){}}function trackEvent(event,data={}){const occurredAt=new Date().toISOString();if(!analyticsLead.identified){analyticsLead.queue.push({event,data,occurredAt});return}postAnalytics(event,{...data,name:analyticsLead.name,phone:analyticsLead.phone},occurredAt)}function identifyLead(name,phone){analyticsLead.name=name;analyticsLead.phone=phone;analyticsLead.identified=true;const queued=analyticsLead.queue.splice(0);queued.forEach(x=>postAnalytics(x.event,{...x.data,name,phone},x.occurredAt))}"
+          new = "const analyticsLead={name:'',phone:'',identified:false};function postAnalytics(event,data={},occurredAt=new Date().toISOString()){try{fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event,data,occurredAt}),keepalive:true}).catch(()=>{})}catch(e){}}function trackEvent(event,data={}){const occurredAt=new Date().toISOString();const payload=analyticsLead.identified?{...data,name:analyticsLead.name,phone:analyticsLead.phone}:data;postAnalytics(event,payload,occurredAt)}function identifyLead(name,phone){analyticsLead.name=name;analyticsLead.phone=phone;analyticsLead.identified=true}"
+          if old not in s:
+              raise SystemExit('analytics block not found')
+          s = s.replace(old, new, 1)
+
+          old_listener = "if(text.includes('Подзвонити')||text==='Дзвінок')trackEvent('call_clicked',{context:el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':'Сайт'})"
+          new_listener = "if(text.includes('Подзвонити')||text==='Дзвінок'||(el.tagName==='A'&&String(el.getAttribute('href')||'').startsWith('tel:')))trackEvent('call_clicked',{context:el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':el.closest('#callSheet')?'Вибір номера':'Сайт'})"
+          if old_listener not in s:
+              raise SystemExit('call listener not found')
+          s = s.replace(old_listener, new_listener, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Track anonymous analytics immediately [skip ci]"
+          git push
