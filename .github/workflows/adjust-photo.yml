@@ -1,4 +1,4 @@
-name: Confirm request before sending
+name: Apply request confirmation patch
 
 on:
   push:
@@ -14,26 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update request confirmation flow
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          s = p.read_text()
-          start = s.find('function finish(){')
-          end = s.find("document.addEventListener('click'", start)
-          if start == -1 or end == -1:
-              raise SystemExit('finish block not found')
-          new_block = r'''function requestSummary(){return `<b>\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u0442\u0435 \u0434\u0430\u043d\u0456 \u0437\u0430\u044f\u0432\u043a\u0438 \u2705</b><br><br>\u0406\u043c\u2019\u044f: ${esc(s.name)}<br>\u0422\u0435\u043b\u0435\u0444\u043e\u043d: ${esc(s.phone)}<br>\u0422\u0435\u0445\u043d\u0456\u043a\u0430: ${esc(s.machine)}<br>\u041c\u0430\u0440\u043a\u0430: ${esc(s.brand)}<br>\u041c\u043e\u0434\u0435\u043b\u044c: ${esc(s.model)}<br>\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430: ${esc(s.issue)}<br>\u041a\u043e\u0434 \u043f\u043e\u043c\u0438\u043b\u043a\u0438: ${esc(s.error)}${s.changes?`<br><br><b>\u0414\u0435\u0442\u0430\u043b\u0456 / \u0437\u043c\u0456\u043d\u0438:</b> ${esc(s.changes)}`:''}<br><br><b>\u0412\u0441\u0435 \u0432\u0456\u0440\u043d\u043e?</b>`}
-function showRequestReview(){i.disabled=true;b(requestSummary());c.innerHTML='<button class="chip" type="button" onclick="confirmRequest()">\u0422\u0430\u043a</button><button class="chip" type="button" onclick="editRequest()">\u041d\u0456</button>'}
-function confirmRequest(){c.innerHTML='';trackEvent('service_request',{name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error,changes:s.changes||''});b(`<b>\u0417\u0430\u044f\u0432\u043a\u0443 \u0441\u0442\u0432\u043e\u0440\u0435\u043d\u043e \u0442\u0430 \u043f\u0435\u0440\u0435\u0434\u0430\u043d\u043e \u0410\u043d\u0434\u0440\u0456\u044e \u2705</b><br>\u0412\u0456\u043d \u0437\u0432\u2019\u044f\u0436\u0435\u0442\u044c\u0441\u044f \u0437 \u0412\u0430\u043c\u0438 \u0437\u0430 \u043d\u043e\u043c\u0435\u0440\u043e\u043c <b>${esc(s.phone)}</b>.`)}
-function editRequest(){c.innerHTML='<div style="width:100%;display:grid;gap:10px"><label style="font-weight:700">\u0412\u043d\u0435\u0441\u0456\u0442\u044c \u0434\u0435\u0442\u0430\u043b\u0456 (\u0447\u0438 \u0437\u043c\u0456\u043d\u0438)</label><textarea id="requestChanges" rows="4" placeholder="\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434: \u0456\u043d\u0448\u0430 \u043c\u043e\u0434\u0435\u043b\u044c, \u0443\u0442\u043e\u0447\u043d\u0435\u043d\u043d\u044f \u043f\u0440\u043e\u0431\u043b\u0435\u043c\u0438, \u0437\u0440\u0443\u0447\u043d\u0438\u0439 \u0447\u0430\u0441 \u0434\u043b\u044f \u0434\u0437\u0432\u0456\u043d\u043a\u0430..." style="width:100%;resize:vertical;padding:12px 14px;border:1px solid #d8dce3;border-radius:14px;font:inherit"></textarea><button class="chip" type="button" onclick="saveRequestChanges()">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u043c\u0456\u043d\u0438</button></div>';setTimeout(()=>{const x=document.getElementById('requestChanges');if(x)x.focus()},50)}
-function saveRequestChanges(){const x=document.getElementById('requestChanges');const v=(x?x.value:'').trim();if(!v){b('\u041d\u0430\u043f\u0438\u0448\u0456\u0442\u044c, \u0431\u0443\u0434\u044c \u043b\u0430\u0441\u043a\u0430, \u0449\u043e \u0441\u0430\u043c\u0435 \u043f\u043e\u0442\u0440\u0456\u0431\u043d\u043e \u0437\u043c\u0456\u043d\u0438\u0442\u0438 \u0430\u0431\u043e \u0434\u043e\u0434\u0430\u0442\u0438.');return}s.changes=v;c.innerHTML='';showRequestReview()}
-function finish(){showRequestReview()}
-'''
-          s = s[:start] + new_block + s[end:]
-          p.write_text(s)
-          PY
+      - name: Patch consultation flow
+        run: python patch_confirm.py
       - name: Commit change
         run: |
           git config user.name 'github-actions[bot]'
