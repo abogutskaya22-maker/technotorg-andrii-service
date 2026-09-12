@@ -1,4 +1,4 @@
-name: Authentic brand logo SVGs
+name: Confirm service request before sending
 
 on:
   push:
@@ -14,46 +14,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Replace drawn icons with authentic brand SVG paths
+      - name: Add yes no confirmation and edit block
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
-          import urllib.request
 
           p = Path('index.html')
           s = p.read_text()
 
-          brands = {
-            'Viber': ('viber', '#7360F2'),
-            'WhatsApp': ('whatsapp', '#25D366'),
-            'Telegram': ('telegram', '#26A5E4'),
-            'Vodafone': ('vodafone', '#E60000'),
-          }
+          start = s.find('function finish(){')
+          end = s.find("document.addEventListener('click'", start)
+          if start == -1 or end == -1:
+              raise SystemExit('finish() block not found')
 
-          def get_svg(slug, color, label):
-              # Simple Icons ships the actual trademark vector path for each brand.
-              url = f'https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/{slug}.svg'
-              req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
-              svg = urllib.request.urlopen(req, timeout=20).read().decode('utf-8')
-              svg = re.sub(r'<svg[^>]*>', f'<svg viewBox="0 0 24 24" role="img" aria-label="{label}" style="width:100%;height:100%;display:block;fill:{color}">', svg, count=1)
-              svg = svg.replace('fill="currentColor"', '')
-              return svg
-
-          for label, (slug, color) in brands.items():
-              svg = get_svg(slug, color, label)
-
-              # Replace currently inlined handmade SVG for this label.
-              pattern = r'<svg[^>]*aria-label="' + re.escape(label) + r'"[^>]*>.*?</svg>'
-              s, n = re.subn(pattern, svg, s, flags=re.S)
-
-              # Fallbacks for any old img/background implementation.
-              if n == 0:
-                  pattern2 = r'<span class="cssImg" role="img" aria-label="' + re.escape(label) + r'"[^>]*></span>'
-                  s = re.sub(pattern2, svg, s)
-                  pattern3 = r'<img[^>]*alt="' + re.escape(label) + r'"[^>]*>'
-                  s = re.sub(pattern3, svg, s)
-
+          new_block = r'''function requestSummary(){return `<b>Перевірте дані заявки ✅</b><br><br>Ім’я: ${esc(s.name)}<br>Телефон: ${esc(s.phone)}<br>Техніка: ${esc(s.machine)}<br>Марка: ${esc(s.brand)}<br>Модель: ${esc(s.model)}<br>Проблема: ${esc(s.issue)}<br>Код помилки: ${esc(s.error)}${s.changes?`<br><br><b>Деталі / зміни:</b> ${esc(s.changes)}`:''}<br><br><b>Все вірно?</b>`}
+function showRequestReview(){i.disabled=true;b(requestSummary());c.innerHTML='<button class="chip" type="button" onclick="confirmRequest()">Так</button><button class="chip" type="button" onclick="editRequest()">Ні</button>'}
+function confirmRequest(){c.innerHTML='';trackEvent('service_request',{name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error,changes:s.changes||''});b(`<b>Заявку створено та передано Андрію ✅</b><br>Він зв’яжеться з Вами за номером <b>${esc(s.phone)}</b>.`)}
+function editRequest(){c.innerHTML='<div style="width:100%;display:grid;gap:10px"><label style="font-weight:700">Внесіть деталі (чи зміни)</label><textarea id="requestChanges" rows="4" placeholder="Наприклад: інша модель, уточнення проблеми, зручний час для дзвінка..." style="width:100%;resize:vertical;padding:12px 14px;border:1px solid #d8dce3;border-radius:14px;font:inherit"></textarea><button class="chip" type="button" onclick="saveRequestChanges()">Зберегти зміни</button></div>';setTimeout(()=>{const x=document.getElementById('requestChanges');if(x)x.focus()},50)}
+function saveRequestChanges(){const x=document.getElementById('requestChanges');const v=(x?x.value:'').trim();if(!v){b('Напишіть, будь ласка, що саме потрібно змінити або додати.');return}s.changes=v;c.innerHTML='';showRequestReview()}
+function finish(){showRequestReview()}
+'''
+          s = s[:start] + new_block + s[end:]
           p.write_text(s)
           PY
       - name: Commit change
@@ -61,5 +42,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Use authentic brand logo vectors [skip ci]' || exit 0
+          git commit -m 'Add request confirmation and editing flow [skip ci]' || exit 0
           git push
