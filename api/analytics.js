@@ -14,8 +14,6 @@ export default async function handler(req, res) {
 
   const clean = (v, max = 500) => String(v ?? '—').replace(/[<>]/g, '').slice(0, max);
 
-  // Міні-консультація тепер створює одну повноцінну заявку.
-  // Технічні події входу/відкриття консультації в Telegram не надсилаємо.
   if (event === 'page_view' || event === 'consultation_started') {
     return res.status(200).json({ ok: true, skipped: true });
   }
@@ -37,10 +35,10 @@ export default async function handler(req, res) {
       `🏷 Марка: ${clean(data.brand, 120)}`,
       `🔢 Модель: ${clean(data.model, 160)}`,
       `⚠️ Проблема: ${clean(data.issue, 700)}`,
-      `🧾 Код помилки: ${clean(data.error, 160)}`,
-      '',
-      '📌 Статус: нова заявка — потрібно зв’язатися з клієнтом'
+      `🧾 Код помилки: ${clean(data.error, 160)}`
     );
+    if (data.changes) lines.push(`📝 Деталі / зміни: ${clean(data.changes, 700)}`);
+    lines.push('', '📌 Статус: нова заявка — потрібно зв’язатися з клієнтом');
   } else {
     if (data.name) lines.push(`👤 Ім’я: ${clean(data.name, 120)}`);
     if (data.phone) lines.push(`📱 Телефон: ${clean(data.phone, 80)}`);
