@@ -1,4 +1,4 @@
-name: Fix call popup and request button
+name: Upgrade AI request chat
 
 on:
   push:
@@ -10,45 +10,62 @@ permissions:
   contents: write
 
 jobs:
-  fix-actions:
+  upgrade-chat:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Repair button JavaScript and rename consultation CTA
+      - name: Improve choices, photo upload and confirmation flow
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('index.html')
           s = p.read_text()
 
-          # Fix the JavaScript parse error that prevents all onclick handlers from loading.
-          s = s.replace("trackEvent('page_view',{})const ICONS=", "trackEvent('page_view',{});const ICONS=", 1)
+          old_choice = '.choice{border:1px solid var(--l);background:#fff;border-radius:999px;padding:9px 12px;font-weight:750;cursor:pointer}'
+          new_choice = '.choice{border:1px solid var(--l);background:#f8f9fa;border-radius:14px;padding:12px 14px;font-weight:800;cursor:pointer;color:var(--i);box-shadow:0 2px 8px rgba(20,20,25,.04);transition:.18s ease;min-height:46px}.choice:hover{border-color:#f2a1b5;background:#fff1f4;transform:translateY(-1px)}.choice:active{transform:translateY(0)}.choiceIcon{font-size:18px;margin-right:6px}.photoBox{width:100%;border:1px dashed #d3d7de;background:#f8f9fa;border-radius:18px;padding:15px}.photoUpload{width:100%;border:0;background:#fff1f4;color:var(--r);border-radius:14px;padding:14px 16px;font-weight:850;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px}.photoHint{font-size:12px;color:var(--m);margin-top:8px;text-align:center}.photoReady{padding:11px 13px;border-radius:13px;background:#eef9f1;color:#26733d;font-weight:800;margin-bottom:9px}.reviewActions{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%}.reviewActions .choice{width:100%}.sending{width:100%;text-align:center;color:var(--m);font-weight:700;padding:8px}'
+          if old_choice not in s:
+              raise SystemExit('choice CSS block not found')
+          s = s.replace(old_choice, new_choice, 1)
 
-          # Rename the primary consultation CTA while keeping the existing AI-chat handler.
-          s = s.replace('>🤖 Міні-консультація</button>', '>🤖 Залишити заявку</button>')
-          s = s.replace('>🤖 Відкрити міні-консультацію</button>', '>🤖 Залишити заявку</button>')
+          new_js = r'''const s={step:0,name:'',phone:'',machine:'',brand:'',model:'',issue:'',error:'',photoData:'',photoName:'',changes:'',mode:''},m=document.getElementById('msgs'),c=document.getElementById('choices'),i=document.getElementById('input');
+function b(t,w='bot'){let d=document.createElement('div');d.className='bubble '+w;d.innerHTML=t;m.appendChild(d);m.scrollTop=m.scrollHeight}
+function esc(t){return String(t??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[a]))}
+function choiceIcon(x){const map={'Трактор':'🚜','Комбайн':'🌾','Обприскувач':'💧','Інше':'⚙️','New Holland':'🔵','Case IH':'🔴','Agrifac':'🟢','Інша':'🏷️','Немає':'✓','Не знаю':'?'};return map[x]||'•'}
+function ch(a){c.innerHTML='';a.forEach(x=>{let q=document.createElement('button');q.className='choice';q.type='button';q.innerHTML=`<span class="choiceIcon">${choiceIcon(x)}</span>${esc(x)}`;q.onclick=()=>ans(x);c.appendChild(q)})}
+function ask(){c.innerHTML='';i.value='';i.disabled=false;i.inputMode='text';i.placeholder='Напишіть відповідь…';if(s.step===0){b('Вітаю! Я <b>Анна</b>, AI-асистентка сервісного інженера Андрія 👋<br>Як до Вас можна звертатися?')}else if(s.step===1){b(`Дуже приємно, ${esc(s.name)}! Вкажіть, будь ласка, номер телефону для зв’язку з Андрієм.`);i.inputMode='tel';i.placeholder='+380XXXXXXXXX або 0XXXXXXXXX'}else if(s.step===2){b('Яка техніка потребує допомоги?');ch(['Трактор','Комбайн','Обприскувач','Інше'])}else if(s.step===3){b('Вкажіть марку техніки.');ch(['New Holland','Case IH','Agrifac','Інша'])}else if(s.step===4){b('Яка модель?')}else if(s.step===5){b('Коротко опишіть проблему.')}else if(s.step===6){b('Вкажіть код помилки.');ch(['Немає','Не знаю'])}else if(s.step===7){showPhotoStep()}else{showReview()}}
+function ans(t){if(s.step===1){const phone=t.replace(/[\s()\-]/g,'');if(!/^(?:\+380\d{9}|0\d{9})$/.test(phone)){b('Перевірте номер, будь ласка. Введіть у форматі <b>+380XXXXXXXXX</b> або <b>0XXXXXXXXX</b>.');i.value='';return}t=phone;identifyLead(s.name,t)}b(esc(t),'user');['name','phone','machine','brand','model','issue','error'].forEach((k,n)=>{if(s.step===n)s[k]=t});s.step++;setTimeout(ask,150)}
+function send(e){e.preventDefault();let t=i.value.trim();if(!t)return;if(s.mode==='changes'){s.changes=t;b(esc(t),'user');s.mode='';i.value='';i.disabled=true;b('Дякую, додала Ваші уточнення до заявки. Перевірте ще раз 👇');setTimeout(showReview,180);return}ans(t)}
+function showPhotoStep(){i.disabled=true;b('За бажанням додайте <b>фото техніки, дисплея або помилки</b>. Це допоможе Андрію швидше зорієнтуватися.');renderPhotoBox()}
+function renderPhotoBox(){c.innerHTML=`<div class="photoBox">${s.photoName?`<div class="photoReady">✅ Фото додано: ${esc(s.photoName)}</div>`:''}<input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden><button class="photoUpload" type="button" onclick="document.getElementById('photoInput').click()">📷 ${s.photoName?'Змінити фото':'Додати фото'}</button><div class="photoHint">JPG, PNG або WEBP · фото буде оптимізовано перед відправленням</div><button class="choice" style="width:100%;margin-top:10px" type="button" onclick="continueAfterPhoto()">${s.photoName?'Продовжити':'Продовжити без фото'} →</button></div>`;document.getElementById('photoInput').addEventListener('change',handlePhoto)}
+function handlePhoto(e){const f=e.target.files&&e.target.files[0];if(!f)return;if(!/^image\/(jpeg|png|webp)$/.test(f.type)){b('Будь ласка, оберіть фото у форматі JPG, PNG або WEBP.');return}if(f.size>12*1024*1024){b('Фото завелике. Оберіть файл до 12 МБ.');return}const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const max=1280,scale=Math.min(1,max/Math.max(img.width,img.height)),w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale)),cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);s.photoData=cv.toDataURL('image/jpeg',.78);s.photoName=f.name.replace(/\.[^.]+$/,'.jpg');renderPhotoBox()};img.onerror=()=>b('Не вдалося прочитати фото. Спробуйте інше.');img.src=r.result};r.readAsDataURL(f)}
+function continueAfterPhoto(){s.step=8;b(s.photoName?'📷 Фото додано':'Продовжити без фото','user');setTimeout(showReview,160)}
+function summaryHtml(){return `<b>Перевірте заявку:</b><br><br>👤 Ім’я: ${esc(s.name)}<br>📱 Телефон: ${esc(s.phone)}<br>🚜 Техніка: ${esc(s.machine)}<br>🏷 Марка: ${esc(s.brand)}<br>🔢 Модель: ${esc(s.model)}<br>⚠️ Проблема: ${esc(s.issue)}<br>🧾 Код помилки: ${esc(s.error)}<br>📷 Фото: ${s.photoName?'додано':'не додано'}${s.changes?`<br>📝 Уточнення: ${esc(s.changes)}`:''}<br><br><b>Чи все вірно вказано?</b>`}
+function showReview(){i.disabled=true;i.placeholder='Напишіть відповідь…';b(summaryHtml());c.innerHTML='<div class="reviewActions"><button class="choice" type="button" onclick="confirmRequest(true)">✅ Так, все вірно</button><button class="choice" type="button" onclick="confirmRequest(false)">✏️ Ні, змінити</button></div>'}
+function confirmRequest(ok){if(ok){b('Так, все вірно','user');submitRequest();return}b('Ні, потрібно внести зміни','user');c.innerHTML='';s.mode='changes';i.disabled=false;i.placeholder='Внесіть зміни у заявку…';i.focus();b('<b>Внесіть зміни у заявку.</b><br>Напишіть, що саме потрібно виправити або уточнити.')}
+async function submitRequest(){i.disabled=true;c.innerHTML='<div class="sending">Надсилаю заявку Андрію…</div>';const data={name:s.name,phone:s.phone,machine:s.machine,brand:s.brand,model:s.model,issue:s.issue,error:s.error,changes:s.changes,photoData:s.photoData,photoName:s.photoName};try{const resp=await fetch('/api/analytics',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({event:'service_request',data,occurredAt:new Date().toISOString()})});const out=await resp.json().catch(()=>({}));if(!resp.ok||!out.ok)throw new Error(out.error||'send_failed');c.innerHTML='';b('✅ <b>Заявку надіслано!</b><br>Андрій отримає всі дані та зв’яжеться з Вами за вказаним номером.')}catch(e){c.innerHTML='<button class="choice" style="width:100%" type="button" onclick="submitRequest()">↻ Спробувати надіслати ще раз</button>';b('Не вдалося надіслати заявку. Дані не втрачено — натисніть «Спробувати надіслати ще раз».')}}
+document.addEventListener('click',e=>{const el=e.target.closest('a,button');if(!el)return;const text=(el.textContent||'').trim();let messenger='';if(text.includes('WhatsApp'))messenger='WhatsApp';else if(text.includes('Viber'))messenger='Viber';else if(text.includes('Telegram'))messenger='Telegram';if(messenger)trackEvent('messenger_clicked',{messenger,context:el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':'Сайт'});if(text.includes('Подзвонити')||text==='Дзвінок')trackEvent('call_clicked',{context:el.closest('#contact')?'Контакти':el.closest('.heroActions')?'Головний екран':'Сайт'})});ask()'''
 
-          # Keep the mobile bottom action consistent.
-          s = s.replace('<span>🤖</span>Консультація</button>', '<span>🤖</span>Заявка</button>')
+          pattern = r"const s=\{.*?ask\(\)</script>"
+          replaced, count = re.subn(pattern, new_js + '</script>', s, count=1, flags=re.S)
+          if count != 1:
+              raise SystemExit(f'chat JS replacement count={count}')
+          s = replaced
 
-          if "trackEvent('page_view',{})const ICONS=" in s:
-              raise SystemExit('JavaScript parse error is still present')
-          if '>🤖 Міні-консультація</button>' in s:
-              raise SystemExit('Primary CTA rename did not apply')
-          if "onclick=\"openSheet('callSheet')\"" not in s:
-              raise SystemExit('Call-sheet handler missing')
-          if 'id="callSheet"' not in s or 'tel:+380665628743' not in s or 'tel:+380969897456' not in s:
-              raise SystemExit('Two-number call sheet is incomplete')
-          if 'onclick="openConsult()"' not in s:
-              raise SystemExit('AI consultation handler missing')
+          required = ['photoInput','confirmRequest(true)','service_request','Внесіть зміни у заявку','Так, все вірно']
+          for marker in required:
+              if marker not in s:
+                  raise SystemExit(f'missing marker: {marker}')
+          if "onclick=\"openSheet('callSheet')\"" not in s or 'id="callSheet"' not in s:
+              raise SystemExit('call popup was damaged')
 
           p.write_text(s)
           PY
-      - name: Commit repaired page
+      - name: Commit upgraded chat
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html
-          git commit -m 'Repair call popup and AI request button [skip ci]' || exit 0
+          git commit -m 'Add photo and confirmation flow to AI request chat [skip ci]' || exit 0
           git push
