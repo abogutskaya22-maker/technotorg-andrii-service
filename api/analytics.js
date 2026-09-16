@@ -1,3 +1,4 @@
+import {telegramPhoto} from '../lib/telegram-photo.js';
 const SUPABASE_URL = 'https://tuoubfmngreuwiolsykr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_wvdhkwV3ScV7i5bBFFI6Qw_qrbkewR8';
 const WORK_GROUP_CHAT_ID = '-1004416878965';
@@ -33,6 +34,11 @@ export default async function handler(req, res) {
   const data = body.data && typeof body.data === 'object' ? body.data : {};
   const occurredAt = body.occurredAt ? new Date(body.occurredAt) : new Date();
   const safeDate = Number.isNaN(occurredAt.getTime()) ? new Date() : occurredAt;
+  let photo;
+  if (event === 'service_request') {
+    try { photo = await telegramPhoto(data); }
+    catch (_) { return res.status(400).json({ ok: false, error: 'invalid_photo' }); }
+  }
   try { await saveAnalyticsEvent(event, data, safeDate); } catch (e) { console.error('analytics storage failed', e); }
   if (event !== 'service_request') return res.status(200).json({ ok: true, tracked: true });
 
@@ -52,18 +58,14 @@ export default async function handler(req, res) {
   lines.push('', '📌 Статус: нова заявка — потрібно зв’язатися з клієнтом');
 
   try {
-    const photoData = typeof data.photoData === 'string' ? data.photoData : '';
-    const photoMatch = photoData.match(/^data:(image\/(?:jpeg|jpg|png|webp));base64,(.+)$/);
-    if (photoMatch) {
-      const mime = photoMatch[1] === 'image/jpg' ? 'image/jpeg' : photoMatch[1];
-      const bytes = Buffer.from(photoMatch[2], 'base64');
+    if (photo) {
       const form = new FormData();
-      form.append('chat_id', chatId); form.append('caption', lines.join('\n').slice(0, 1000)); form.append('parse_mode', 'HTML');
-      form.append('photo', new Blob([bytes], { type: mime }), clean(data.photoName || 'request.jpg', 120));
+      form.append('chat_id', chatId); form.append('caption', lines.join('\n').replace(/<\/?b>/g, '').slice(0, 1000));
+      form.append('photo', new Blob([photo.bytes], { type: photo.mime }), photo.name);
       const tgPhoto = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: form });
       const photoResult = await tgPhoto.json();
       if (!photoResult.ok) return res.status(502).json({ ok: false, error: 'telegram_photo_error', description: photoResult.description || '' });
-      return res.status(200).json({ ok: true, photo: true });
+      return res.status(200).json({ ok: true, photo: true, messageId: photoResult.result?.message_id });
     }
     const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
