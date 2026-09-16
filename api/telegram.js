@@ -1,5 +1,6 @@
 const SUPABASE_URL = 'https://tuoubfmngreuwiolsykr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_wvdhkwV3ScV7i5bBFFI6Qw_qrbkewR8';
+const WORK_GROUP_CHAT_ID = '-1004416878965';
 
 async function tg(token, method, payload) {
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
@@ -50,8 +51,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false });
 
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const allowedChatId = String(process.env.TELEGRAM_CHAT_ID || '');
-  if (!token || !allowedChatId) return res.status(503).json({ ok: false });
+  if (!token) return res.status(503).json({ ok: false });
 
   const update = req.body || {};
   const message = update.message;
@@ -59,14 +59,8 @@ export default async function handler(req, res) {
   const chatId = String(message?.chat?.id ?? callback?.message?.chat?.id ?? '');
   const text = String(message?.text || '').trim();
 
-  // Temporary safe registration probe: logs only a group/supergroup ID when the bot is explicitly addressed with /start.
-  const isRegistrationProbe = (message?.chat?.type === 'group' || message?.chat?.type === 'supergroup') && /^\/start(?:@kimnatnyi_bot)?(?:\s|$)/i.test(text);
-  if (chatId && chatId !== allowedChatId && isRegistrationProbe) {
-    console.log('TELEGRAM_GROUP_REGISTRATION_CANDIDATE', chatId, message?.chat?.type);
-    return res.status(200).json({ ok: true });
-  }
-
-  if (!chatId || chatId !== allowedChatId) {
+  // The bot is intentionally available only in the private working group.
+  if (!chatId || chatId !== WORK_GROUP_CHAT_ID) {
     if (callback?.id) await tg(token, 'answerCallbackQuery', { callback_query_id: callback.id });
     return res.status(200).json({ ok: true });
   }
@@ -81,17 +75,16 @@ export default async function handler(req, res) {
     }
 
     if (text === '/start' || /^\/start@kimnatnyi_bot$/i.test(text)) {
-      await tg(token, 'sendMessage', { chat_id: chatId, text: 'Готово 👌 Тут будуть приходити тільки нові заявки з сайту. Аналітику можна відкрити окремо через кнопку нижче.', reply_markup: mainKeyboard });
+      await tg(token, 'sendMessage', { chat_id: chatId, text: 'Готово 👌 Тут будуть приходити нові заявки з сайту. Аналітику можна відкрити через кнопку нижче.', reply_markup: mainKeyboard });
       return res.status(200).json({ ok: true });
     }
 
-    if (text === '/analytics' || text === '📊 Аналітика') {
+    if (text === '/analytics' || /^\/analytics@kimnatnyi_bot$/i.test(text) || text === '📊 Аналітика') {
       const row = await getSummary(1);
       await tg(token, 'sendMessage', { chat_id: chatId, text: summaryText(row, 1), parse_mode: 'HTML', reply_markup: periodKeyboard });
       return res.status(200).json({ ok: true });
     }
 
-    await tg(token, 'sendMessage', { chat_id: chatId, text: 'Оберіть дію в меню нижче.', reply_markup: mainKeyboard });
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error('telegram webhook error', e);
